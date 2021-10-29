@@ -20,9 +20,9 @@ resource "aws_instance" "srv01" {
 
 
   connection {
-    type = "ssh"
-    host = self.public_ip
-    user  = "ubuntu"
+    type        = "ssh"
+    host        = self.public_ip
+    user        = "ubuntu"
     private_key = file("privatekey.pem")
   }
 
@@ -31,12 +31,14 @@ resource "aws_instance" "srv01" {
   }
 
   provisioner "file" {
-    source = "code.txt"
+    source      = "code.txt"
     destination = "~/mycode.txt"
   }
 
   provisioner "remote-exec" {
     inline = [
+      # "chmod +x script.sh",
+      # "./script.sh",
       "cat ~/mycode.txt"
     ]
   }
@@ -65,7 +67,81 @@ output "ipaddress" {
 
 
 output "private_ip" {
-  value = aws_instance.srv01[*].private_ip
+  value     = aws_instance.srv01[*].private_ip
+  sensitive = true
 }
 
 
+
+resource "aws_security_group" "sg1" {
+  description = "Managed by Terraform"
+  egress = [
+    {
+      cidr_blocks = [
+        "0.0.0.0/0",
+      ]
+      description      = ""
+      from_port        = 0
+      ipv6_cidr_blocks = []
+      prefix_list_ids  = []
+      protocol         = "-1"
+      security_groups  = []
+      self             = false
+      to_port          = 0
+    },
+  ]
+  ingress = [
+    {
+      cidr_blocks = [
+        "0.0.0.0/0",
+      ]
+      description      = ""
+      from_port        = 80
+      ipv6_cidr_blocks = []
+      prefix_list_ids  = []
+      protocol         = "tcp"
+      security_groups  = []
+      self             = false
+      to_port          = 80
+    },
+  ]
+  name     = "app-alb-security-group"
+  tags     = {}
+  tags_all = {}
+  vpc_id   = "vpc-03ada648584802bf4"
+}
+
+
+
+resource "aws_security_group" "southsg" {
+  provider = aws.apsouth
+  ingress = [
+    {
+      cidr_blocks = [
+        "0.0.0.0/0",
+      ]
+      description      = ""
+      from_port        = 80
+      ipv6_cidr_blocks = []
+      prefix_list_ids  = []
+      protocol         = "tcp"
+      security_groups  = []
+      self             = false
+      to_port          = 80
+    },
+  ]
+  name = "app-alb-security-group"
+}
+
+data "aws_caller_identity" "ci" {
+  provider = aws.apsouth
+}
+
+resource "azurerm_resource_group" "myterraformgroup" {
+    name     = "myResourceGroup"
+    location = "eastus"
+
+    tags = {
+        environment = aws_security_group.southsg.name
+    }
+}

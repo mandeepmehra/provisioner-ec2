@@ -19,21 +19,27 @@ resource "aws_instance" "srv01" {
   key_name = "mandeep" # Created security group manually
 
 
-#   connection {
-#     type = "ssh"
-#     host = self.public_ip
-#     user  = "ubuntu"
-#     private_key = file("privatekey")
-#   }
+  connection {
+    type = "ssh"
+    host = self.public_ip
+    user  = "ubuntu"
+    private_key = file("privatekey.pem")
+  }
 
   provisioner "local-exec" {
     command = "echo ${self.public_ip}"
   }
 
-#   provisioner "file" {
-#     source = "code.txt"
-#     destination = "~/mycode.txt"
-#   }
+  provisioner "file" {
+    source = "code.txt"
+    destination = "~/mycode.txt"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "cat ~/mycode.txt"
+    ]
+  }
 }
 
 resource "aws_security_group" "publicwebsg" {
